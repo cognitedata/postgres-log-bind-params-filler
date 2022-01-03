@@ -71,19 +71,21 @@ def main():
         query_found = False
         sql = ''
         bind_count = 0
+        explain_emitted = False
 
         line = fp.readline()
 
         while line:
 
             if not query_found and r_query_start.match(line):
-                sql = ''
+                sql = line  # let's also include the timestamp + duration line
                 query_found = True  # start "capture" cycle, collect next query lines till params list
                 logging.debug('found a bindable query: %s', line)
             elif query_found and not r_params_line.match(line):
                 # logging.debug('collecting one line of SQL: %s', line)
-                if args.explain and not sql:
+                if args.explain and not explain_emitted:
                     sql += 'EXPLAIN \n'
+                    explain_emitted = True
                 sql += line
             elif query_found and r_params_line.match(line):
                 logging.debug('found parameters - binding: %s', line)
@@ -93,6 +95,7 @@ def main():
                 fpn.write(binded_sql)
                 query_found = False
                 bind_count += 1
+                explain_emitted = False
 
             line = fp.readline()
 

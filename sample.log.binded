@@ -1,3 +1,4 @@
+2021-12-21 17:00:32.071 UTC-61c20813.14e28-LOG:  duration: 28625.572 ms  bind <unnamed>: 
 	                  SELECT * FROM tbl WHERE id = '9'
 	                      AND mktime > '2021-11-26 08:29:41.582167'
 	               
