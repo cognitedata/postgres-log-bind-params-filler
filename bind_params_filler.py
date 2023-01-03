@@ -4,12 +4,14 @@ import re
 import argparse
 import logging
 
-
+# TODO use some map for GCP / Azure regexes and unify code
 r_query_start = re.compile(r'^\d{4}.*duration:.*ms.*bind')
+r_query_start_azure = re.compile(r'.*LOG.*duration:.*ms')
 r_params_line = re.compile(r'^\d{4}.*parameters: \$1 = ')
-r_params_capture = re.compile(r"""(\$\d+ = '.*?',)""")  # this leaves out the last param, which needs special capture
-r_param_num_from_param_pair = re.compile(r"""(\$\d+) = '.*?',""") # "$12 = 'ABASASDFASF'," -> $12
-r_param_value_from_param_pair = re.compile(r"""\$\d+ = ('.*?'),""") # "$12 = 'ABASASDFASF'," -> ABASASDFASF
+r_params_line_azure = re.compile(r'.*"parameters: \$1 = ')
+r_params_capture = re.compile(r"""(\$\d+ = '.*?',?)""")  # this leaves out the last param, which needs special capture
+r_param_num_from_param_pair = re.compile(r"""(\$\d+) = '.*?',?""") # "$12 = 'ABASASDFASF'," -> $12
+r_param_value_from_param_pair = re.compile(r"""\$\d+ = ('.*?'),?""") # "$12 = 'ABASASDFASF'," -> ABASASDFASF
 
 
 def params_string_to_pairs(params_line):
@@ -24,7 +26,8 @@ def params_string_to_pairs(params_line):
     else:
         # the last param is missing the comma, add it for unified processing
         last_found_match_idx = params_line.find(matches[-1])
-        last_param = params_line[last_found_match_idx + len(matches[-1]) + 1:].strip('\n') + ","
+        # last_param = params_line[last_found_match_idx + len(matches[-1]) + 1:].strip('\n') + ","
+        last_param = params_line[last_found_match_idx:-1].strip('\n') + ","
         matches.append(last_param)
 
     for m in matches:
@@ -56,6 +59,9 @@ def main():
     argp = argparse.ArgumentParser(description='Scans PostgreSQL logfiles and replaces query parameters placeholders with read bind values where possible and stores to a new $file.binded file')
     argp.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='More chat')
     argp.add_argument('-e', '--explain', dest='explain', action='store_true', help='Prepend all binded SQLs with EXPLAIN for instant execution')
+    group = argp.add_mutually_exclusive_group(required=True)
+    group.add_argument('--azure', dest='azure', action='store_true', help='Azure Log Analytics CSV export format input')
+    group.add_argument('--gcp', dest='gcp', action='store_true', help='GCP CSV logs input')
     argp.add_argument('files', metavar='FILE', nargs='+', help='Log files in stderr / syslog format')
 
     args = argp.parse_args()
@@ -78,30 +84,52 @@ def main():
         line = fp.readline()
 
         while line:
-
-            if not query_found and r_query_start.match(line):
-                sql = line  # let's also include the timestamp + duration line
-                query_found = True  # start "capture" cycle, collect next query lines till params list
-                logging.debug('found a bindable query: %s', line)
-            elif query_found and not r_params_line.match(line):
-                # logging.debug('collecting one line of SQL: %s', line)
-                if args.explain and not explain_emitted:
-                    sql += 'EXPLAIN \n'
-                    explain_emitted = True
-                sql += line
-            elif query_found and r_params_line.match(line):
-                logging.debug('found parameters - binding: %s', line)
-                if not fpn:
-                    fpn = open(file_new, 'w')
-                binded_sql = replace_params_line_into_sql(sql, line)
-                fpn.write(binded_sql)
-                query_found = False
-                bind_count += 1
-                explain_emitted = False
+            if args.gcp:
+                if not query_found and r_query_start.match(line):
+                    sql = line  # let's also include the timestamp + duration line
+                    query_found = True  # start "capture" cycle, collect next query lines till params list
+                    logging.debug('found a bindable query: %s', line)
+                elif query_found and not r_params_line.match(line):
+                    # logging.debug('collecting one line of SQL: %s', line)
+                    if args.explain and not explain_emitted:
+                        sql += 'EXPLAIN \n'
+                        explain_emitted = True
+                    sql += line
+                elif query_found and r_params_line.match(line):
+                    logging.debug('found parameters - binding: %s', line)
+                    logging.debug('input SQL: %s', sql)
+                    if not fpn:
+                        fpn = open(file_new, 'w')
+                    binded_sql = replace_params_line_into_sql(sql, line)
+                    fpn.write(binded_sql)
+                    query_found = False
+                    bind_count += 1
+                    explain_emitted = False
+            elif args.azure:
+                if not query_found and r_query_start_azure.match(line):
+                    sql = line  # let's also include the timestamp + duration line
+                    query_found = True  # start "capture" cycle, collect next query lines till params list
+                    logging.debug('found a bindable query: %s', line)
+                elif query_found and not r_params_line_azure.match(line):
+                    # logging.debug('collecting one line of SQL: %s', line)
+                    if args.explain and not explain_emitted:
+                        sql += 'EXPLAIN \n'
+                        explain_emitted = True
+                    sql += line
+                elif query_found and r_params_line_azure.match(line):
+                    logging.debug('found parameters - binding: %s', line)
+                    logging.debug('input SQL: %s', sql)
+                    if not fpn:
+                        fpn = open(file_new, 'w')
+                    binded_sql = replace_params_line_into_sql(sql, line)
+                    fpn.write(binded_sql)
+                    query_found = False
+                    bind_count += 1
+                    explain_emitted = False
 
             line = fp.readline()
 
-        logging.warning('binded %s SQLs. Outfile: %s', bind_count, file_new)
+        logging.warning('binded %s SQLs. Outfile: %s', bind_count, file_new if fpn else ' none')
 
         fp.close()
         if fpn:

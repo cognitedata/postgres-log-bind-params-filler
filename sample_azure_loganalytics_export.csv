@@ -1,0 +1,54 @@
+"errorLevel_s","timestamp_s",Message,"detail_s"
+LOG,"2023-01-03 12:19:48.062 UTC","2023-01-03 12:19:14.211 UTC-63b41c47.50be- pid - 20670 26-1, db - raw, user - raw, client - 10.240.120.161 LOG:  duration: 9064.400 ms  execute S_6: 
+                  SELECT shard_id, row_key, columns, columns_binary , last_changed_time FROM (
+                    (
+                    select shard_id, row_key, columns, columns_binary , last_changed_time
+                    from raw_rows
+                    where shard_id = $1
+                      and project_id = $2
+                      and table_id = $3
+                      and last_changed_time > $4
+                      and last_changed_time < $5
+                    order by shard_id asc, last_changed_time desc, row_key asc limit $6
+                    )
+                    UNION ALL
+                    (
+                    select shard_id, row_key, columns, columns_binary , last_changed_time
+                    from raw_rows
+                    where shard_id = $7
+                      and project_id = $8
+                      and table_id = $9
+                      and row_key >= $10
+                      and last_changed_time > $11
+                      and last_changed_time = $12
+                    order by shard_id asc, last_changed_time desc, row_key asc limit $13
+                    )
+                  ) AS rows order by shard_id asc, last_changed_time desc, row_key asc limit $14
+               ","parameters: $1 = '1', $2 = '11111', $3 = '2222', $4 = '2021-08-26 15:20:01.320914', $5 = '2021-09-09 20:54:38.335082', $6 = '1001', $7 = '1', $8 = '11111', $9 = '2222', $10 = 'aaabb', $11 = '2021-08-26 15:20:01.320914', $12 = '2021-09-09 20:54:38.335082', $13 = '1001', $14 = '1001'"
+LOG,"2023-01-03 12:19:47.980 UTC","2023-01-03 12:19:36.516 UTC-63b41c0a.4385- pid - 17285 38-1, db - raw, user - raw, client - 10.240.120.161 LOG:  duration: 7445.834 ms  execute S_6: 
+                  SELECT shard_id, row_key, columns, columns_binary , last_changed_time FROM (
+                    (
+                    select shard_id, row_key, columns, columns_binary , last_changed_time
+                    from raw_rows
+                    where shard_id = $1
+                      and project_id = $2
+                      and table_id = $3
+                      and last_changed_time > $4
+                      and last_changed_time < $5
+                    order by shard_id asc, last_changed_time desc, row_key asc limit $6
+                    )
+                    UNION ALL
+                    (
+                    select shard_id, row_key, columns, columns_binary , last_changed_time
+                    from raw_rows
+                    where shard_id = $7
+                      and project_id = $8
+                      and table_id = $9
+                      and row_key >= $10
+                      and last_changed_time > $11
+                      and last_changed_time = $12
+                    order by shard_id asc, last_changed_time desc, row_key asc limit $13
+                    )
+                  ) AS rows order by shard_id asc, last_changed_time desc, row_key asc limit $14
+               ","parameters: $1 = '6', $2 = '2223433', $3 = '3443343', $4 = '2023-01-03 10:27:09.595', $5 = '2023-01-03 11:26:27.143993', $6 = '1001', $7 = '6', $8 = '2223433', $9 = '3443343', $10 = 'axasxa', $11 = '2023-01-03 10:27:09.595', $12 = '2023-01-03 11:26:27.143993', $13 = '1001', $14 = '1001'"
+LOG,"2023-01-03 12:19:47.842 UTC","2023-01-03 12:19:36.849 UTC-63b41d58.a8e- pid - 2702 7-1, db - azure_maintenance, user - azuresu, client - 169.254.128.1 LOG:  execute _p1: create table if not exists public.lsnmover (single_row_id bool default true, id bigint, update_time timestamp default now(), constraint ensure_one_row CHECK (single_row_id), constraint lsnmover_pk primary key (single_row_id))",
