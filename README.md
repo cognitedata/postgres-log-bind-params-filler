@@ -3,4 +3,4 @@ Matches parameterized SQL queries from the PostgreSQL server log with real bind 
 
 # Limitations
 
-Currently only tested with logfiles having `log_line_prefix = '%m-%c-'`
+Currently only tested with logs for Azure Flexible Server and GCP, downloaded from the web UI
